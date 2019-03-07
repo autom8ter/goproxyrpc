@@ -1,0 +1,14 @@
+endpoint: "localhost:3000"
+cors:
+  allow-origin:
+  allow-credentials:
+  allow-methods:
+  allow-headers:
+proxy:
+  port: 8080
+  api-prefix: "/"
+certs:
+  ips: "localhost:3000, localhost:8080"
+  valid: 10
+  common-name: ""
+  alt-dns: ""

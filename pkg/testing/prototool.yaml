@@ -1,0 +1,32 @@
+protoc:
+  version: 3.6.1
+  allow_unused_imports: true
+  includes:
+    - ../../../../../github.com/grpc-ecosystem/grpc-gateway/third_party/googleapis
+    - ../../../../../github.com/grpc-ecosystem/grpc-gateway/protoc-gen-swagger/options
+
+lint:
+  rules:
+    remove:
+      - FILE_OPTIONS_REQUIRE_JAVA_MULTIPLE_FILES
+      - FILE_OPTIONS_REQUIRE_JAVA_PACKAGE
+      - FILE_OPTIONS_REQUIRE_JAVA_OUTER_CLASSNAME
+      - FILE_OPTIONS_EQUAL_GO_PACKAGE_PB_SUFFIX
+
+generate:
+  go_options:
+    import_path: github.com/autom8ter/goproxyrpc/pkg/testing
+  plugins:
+    - name: gogo
+      type: gogo
+      flags: plugins=grpc
+      output: gen
+
+    - name: grpc-gateway
+      type: go
+      output: gen
+
+    - name: swagger
+      type: go
+      output: gen
+      flags: logtostderr=true
