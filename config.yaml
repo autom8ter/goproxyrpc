@@ -7,8 +7,3 @@ cors:
 proxy:
   port: 8080
   api-prefix: "/"
-certs:
-  ips: "localhost:3000, localhost:8080"
-  valid: 10
-  common-name: ""
-  alt-dns: ""
