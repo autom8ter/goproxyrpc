@@ -46,7 +46,7 @@
     "echopbEchoMessage": {
       "type": "object",
       "properties": {
-        "value": {
+        "say": {
           "type": "string"
         }
       }

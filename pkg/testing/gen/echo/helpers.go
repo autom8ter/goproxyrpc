@@ -14,7 +14,8 @@ func NewEchoServer() *EchoServer {
 }
 
 func (e *EchoServer) Echo(ctx context.Context, r *EchoMessage) (*EchoMessage, error) {
-	fmt.Printf("rpc request Echo(%q)\n", r.Value)
+	fmt.Printf("rpc request Echo(%q)\n", r.Say)
+	r.Say = "echoed: " + r.Say
 	return r, nil
 }
 

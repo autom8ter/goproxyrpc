@@ -4,7 +4,7 @@ package echopb;
 import "google/api/annotations.proto";
 
 message EchoMessage {
-    string value = 1;
+    string say = 1;
 }
 
 service EchoService {
