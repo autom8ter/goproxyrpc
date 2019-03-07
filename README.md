@@ -2,25 +2,39 @@
 
 # Overview
 
+## Config (./config.yaml)
+
+### Example:
+```yaml
+endpoint: "localhost:3000"
+cors:
+  allow-origin:
+  allow-credentials:
+  allow-methods:
+  allow-headers:
+proxy:
+  port: 8080
+  api-prefix: "/"
+```
+
 ## Registering a Grpc Gaterway Service
+
+function signature: `func(ctx context.Context, mux *runtime.ServeMux, endpoint string, opts []grpc.DialOption) (err error)`
+
 ```go
 //Eazy Peazy with Golang first class functions
 func RegisterFunc() goproxyrpc.RegisterFunc {
 	return func(ctx context.Context, mux *runtime.ServeMux, endpoint string, opts []grpc.DialOption) (err error) {
 		return echopb.RegisterEchoServiceHandlerFromEndpoint(ctx, mux, endpoint, opts)
-	}
+		//^^^generated from grpc gateway plugin	
+    }
 }
-```
-
-## Starting a Remote Grpc Service
-```go
-if err := echopb.NewEchoServer().Serve(grpc.NewServer()); err != nil {
-			log.Fatal(errors.New("grpc server error", err).String())
-		}
 ```
 
 
 ## Starting the GoProxyRPC server
+Dials the endpoint in your config:
+
 ```go
 
 func main() {
