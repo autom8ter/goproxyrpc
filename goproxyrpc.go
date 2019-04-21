@@ -1,42 +1,50 @@
+//go:generate godocdown -o GODOC.md
+
 package goproxyrpc
 
 import (
-	"fmt"
+	"github.com/autom8ter/authzero/grants"
 	"github.com/autom8ter/goproxyrpc/pkg/config"
-	"github.com/autom8ter/goproxyrpc/pkg/errors"
-	"github.com/spf13/viper"
-	"net/http"
-	"os"
-	"os/signal"
-	"time"
-
 	"github.com/gorilla/handlers"
 	"github.com/grpc-ecosystem/grpc-gateway/runtime"
 	"github.com/sirupsen/logrus"
+	"github.com/spf13/viper"
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
+	"net/http"
+	"os"
 
 	_ "google.golang.org/genproto/googleapis/rpc/errdetails" // Pull in errdetails
 )
 
-type GoProxyRpc struct {
+//Proxy is a REST-gRPC reverse proxy server
+type Proxy struct {
 	http.Handler
 	v    *viper.Viper
 	port int
 }
 
+//RegisterFunc registers a grpc endpoint from the generated RegisterfromEndpoint function from the grpc-gateway protoc plugin
 type RegisterFunc func(ctx context.Context, mux *runtime.ServeMux, endpoint string, opts []grpc.DialOption) (err error)
 
+//NewRegisterFunc is a helper to create a RegisterFunc
+func NewRegisterFunc(fn func(ctx context.Context, mux *runtime.ServeMux, endpoint string, opts []grpc.DialOption) (err error)) RegisterFunc {
+	return fn
+}
+
+//Config holds the necessary non-config file configurations needed to create a Proxy
 type Config struct {
 	EnvPrefix    string
 	DialOptions  []grpc.DialOption
 	RegisterFunc RegisterFunc
 }
 
-func New(ctx context.Context, cfg *Config) *GoProxyRpc {
+//NewProxy creates a new REST-gRPC proxy server. If a jwt_key is found in your config file, the endpoint will be reject all requests that dont provide a valid bearer token.
+func NewProxy(ctx context.Context, cfg *Config) *Proxy {
 	mux := http.NewServeMux()
 	v := config.SetupViper(cfg.EnvPrefix)
 	c := &config.ProxyConfig{
+		JWTKey:               v.GetString("jwt_key"),
 		Endpoint:             v.GetString("endpoint"),
 		LogLevel:             v.GetString("log_level"),
 		LogHeaders:           v.GetBool("log_headers"),
@@ -51,48 +59,16 @@ func New(ctx context.Context, cfg *Config) *GoProxyRpc {
 		logrus.Fatalf("failed to register grpc gateway from endpoint: %s", err.Error())
 	}
 	mux.Handle(c.ApiPrefix, handlers.CustomLoggingHandler(os.Stdout, http.StripPrefix(c.ApiPrefix[:len(c.ApiPrefix)-1], config.AllowCors(c, gw)), config.LogFormatter(c)))
-
-	return &GoProxyRpc{
+	if c.JWTKey != "" {
+		return &Proxy{
+			Handler: grants.Middleware(c.JWTKey, true).Handler(mux),
+			port:    v.GetInt("proxy.port"),
+			v:       v,
+		}
+	}
+	return &Proxy{
 		Handler: mux,
 		port:    v.GetInt("proxy.port"),
 		v:       v,
-	}
-}
-
-func (g *GoProxyRpc) ListenServe(ctx context.Context) {
-	if g.Handler == nil {
-		logrus.Fatalf(`nil handler: use "goproxyrpc.NewGoProxyRpc(ctx context.Context, cfg *Config) *GoProxyRpc" to initialize the proxy`)
-	}
-	server := &http.Server{
-		Addr:    fmt.Sprintf(":%v", g.port),
-		Handler: g,
-	}
-	signalRunner(
-		func() {
-			logrus.Infof("launching http server on %v", server.Addr)
-			if err := server.ListenAndServe(); err != nil {
-				errors.New("failed to launch proxy server", err).FailIfErr()
-			}
-		},
-		func() {
-			shutdown, _ := context.WithTimeout(ctx, 10*time.Second)
-			server.Shutdown(shutdown)
-		})
-}
-
-// SignalRunner runs a runner function until an interrupt signal is received, at which point it
-// will call stopper.
-func signalRunner(runner, stopper func()) {
-	signals := make(chan os.Signal, 1)
-	signal.Notify(signals, os.Interrupt, os.Kill)
-
-	go func() {
-		runner()
-	}()
-
-	logrus.Info("hit Ctrl-C to shutdown proxy")
-	select {
-	case <-signals:
-		stopper()
 	}
 }

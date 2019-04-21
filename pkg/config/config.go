@@ -18,6 +18,8 @@ import (
 )
 
 type ProxyConfig struct {
+	// The JWT signing key to validate Bearer tokens
+	JWTKey string
 	// The Backend gRPC service to listen to.
 	Endpoint string
 	// The log level to use
