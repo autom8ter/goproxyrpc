@@ -6,6 +6,7 @@
 
 ### Example:
 ```yaml
+jwt_key: "supersecret-jwt-signing key"
 endpoint: "localhost:3000"
 cors:
   allow-origin:
